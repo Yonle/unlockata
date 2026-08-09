@@ -20,6 +20,7 @@ const (
 
 	// SAT protocol 5 = PIO Data-Out.
 	SAT_PROTO_PIO_DATA_OUT = 5
+	SAT_PROTO_NON_DATA     = 3
 
 	// Sense descriptor requested.
 	SG_FLAG_LUN_INHIBIT = 0x00000040
@@ -71,6 +72,8 @@ func buildSecurityCDB(command ATASecurityCommand) [16]byte {
 		}
 
 		cdb[6] = byte(blocks)
+	} else {
+		cdb[1] = SAT_PROTO_NON_DATA << 1
 	}
 
 	// ATA command selected by -op.
