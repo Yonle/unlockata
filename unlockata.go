@@ -191,7 +191,9 @@ func execute(
 
 	if hdr.Status != 0 || hdr.Info&0x01 != 0 {
 		if hdr.SbLenWr > 0 {
-			fmt.Printf("SENSE: %x\n", sense[:hdr.SbLenWr])
+			senseData := sense[:hdr.SbLenWr]
+			fmt.Printf("SENSE: %x\n", senseData)
+			fmt.Printf("SENSE DECODED: %s\n", parseSense(senseData))
 		}
 
 		if hdr.Info&0x01 != 0 {
