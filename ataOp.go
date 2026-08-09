@@ -70,6 +70,7 @@ var ataSecurityCommands = map[string]ATASecurityCommand{
 		Name:      "SECURITY DISABLE PASSWORD",
 		DataOut:   true,
 		DataBytes: 512,
+		PayloadType: PayloadSecurityPassword,
 	},
 }
 
