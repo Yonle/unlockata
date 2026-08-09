@@ -99,7 +99,7 @@ func buildSecurityPasswordPayload(password []byte, master, maximum bool) [512]by
 
 func execute(
 	ataOp ATASecurityCommand,
-	master, maximum bool,
+	master, maximum, noreadpart bool,
 	device, passwordFile string,
 ) error {
 	cdb := buildSecurityCDB(ataOp)
@@ -166,9 +166,10 @@ func execute(
 
 	fd, err := unix.Open(
 		device,
-		unix.O_RDWR|unix.O_NONBLOCK,
+		unix.O_RDONLY|unix.O_NONBLOCK,
 		0,
 	)
+
 	if err != nil {
 		return fmt.Errorf("open %s: %w", device, err)
 	}
@@ -180,6 +181,7 @@ func execute(
 		uintptr(SG_IO),
 		uintptr(unsafe.Pointer(&hdr)),
 	)
+
 	if errno != 0 {
 		return fmt.Errorf("SG_IO: %w", errno)
 	}
@@ -199,6 +201,19 @@ func execute(
 			hdr.HostStatus,
 			hdr.DriverStatus,
 		)
+	}
+
+	if !noreadpart {
+		_, _, errno := unix.Syscall(
+			unix.SYS_IOCTL,
+			uintptr(fd),
+			uintptr(unix.BLKRRPART),
+			0,
+		)
+
+		if errno != 0 {
+			return fmt.Errorf("reread partition table: %w", errno)
+		}
 	}
 
 	return nil
@@ -235,6 +250,12 @@ func main() {
 		"use maximum security level",
 	)
 
+	noreadpart := flag.Bool(
+		"noreadpart",
+		false,
+		"do not reread the partition table after the ATA command",
+	)
+
 	flag.Parse()
 
 	if *device == "" {
@@ -268,6 +289,7 @@ func main() {
 		ataOp,
 		*useMaster,
 		*maximum,
+		*noreadpart,
 		*device,
 		*passwd,
 	); err != nil {
