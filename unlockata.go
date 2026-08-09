@@ -70,13 +70,11 @@ func buildSecurityCDB(command ATASecurityCommand) [16]byte {
 			panic("ATA PASS-THROUGH transfer too large")
 		}
 
-		if command.DataBytes > 0 {
-			cdb[3] = byte(blocks)
-		}
+		cdb[6] = byte(blocks)
 	}
 
 	// ATA command selected by -op.
-	cdb[11] = command.Code
+	cdb[14] = command.Code
 
 	return cdb
 }
@@ -186,7 +184,9 @@ func execute(
 		return fmt.Errorf("SG_IO: %w", errno)
 	}
 
-	if hdr.Status != 0 {
+	if hdr.Status != 0 || hdr.Info&0x01 != 0 {
+		fmt.Printf("SENSE: %x\n", sense[:hdr.SbLenWr])
+
 		return fmt.Errorf(
 			"ATA command failed: SCSI status=0x%02x host=0x%04x driver=0x%04x",
 			hdr.Status,

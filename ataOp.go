@@ -26,7 +26,7 @@ var ataSecurityOperationNames = []string{
 	"unlock",
 	"freeze",
 	"erase",
-	"enhanced-erase",
+	"erase-prepare",
 	"disable",
 }
 
@@ -58,9 +58,9 @@ var ataSecurityCommands = map[string]ATASecurityCommand{
 		Destructive: true,
 		PayloadType: PayloadSecurityPassword,
 	},
-	"enhanced-erase": {
+	"erase-prepare": {
 		Code:        0xF5,
-		Name:        "SECURITY ENHANCED ERASE UNIT",
+		Name:        "SECURITY ERASE PREPARE",
 		DataOut:     true,
 		DataBytes:   512,
 		Destructive: true,
