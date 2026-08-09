@@ -46,9 +46,10 @@ var ataSecurityCommands = map[string]ATASecurityCommand{
 		DataBytes:   512,
 		PayloadType: PayloadSecurityPassword,
 	},
-	"freeze": {
-		Code: 0xF3,
-		Name: "SECURITY FREEZE LOCK",
+	"erase-prepare": {
+		Code:        0xF3,
+		Name:        "SECURITY ERASE PREPARE",
+		Destructive: true,
 	},
 	"erase": {
 		Code:        0xF4,
@@ -58,18 +59,15 @@ var ataSecurityCommands = map[string]ATASecurityCommand{
 		Destructive: true,
 		PayloadType: PayloadSecurityPassword,
 	},
-	"erase-prepare": {
-		Code:        0xF5,
-		Name:        "SECURITY ERASE PREPARE",
-		DataOut:     true,
-		DataBytes:   512,
-		Destructive: true,
+	"freeze": {
+		Code: 0xF5,
+		Name: "SECURITY FREEZE LOCK",
 	},
 	"disable": {
-		Code:      0xF6,
-		Name:      "SECURITY DISABLE PASSWORD",
-		DataOut:   true,
-		DataBytes: 512,
+		Code:        0xF6,
+		Name:        "SECURITY DISABLE PASSWORD",
+		DataOut:     true,
+		DataBytes:   512,
 		PayloadType: PayloadSecurityPassword,
 	},
 }

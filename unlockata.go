@@ -185,7 +185,13 @@ func execute(
 	}
 
 	if hdr.Status != 0 || hdr.Info&0x01 != 0 {
-		fmt.Printf("SENSE: %x\n", sense[:hdr.SbLenWr])
+		if hdr.SbLenWr > 0 {
+			fmt.Printf("SENSE: %x\n", sense[:hdr.SbLenWr])
+		}
+
+		if hdr.Info&0x01 != 0 {
+			return errors.New("SG_IO reports command failure")
+		}
 
 		return fmt.Errorf(
 			"ATA command failed: SCSI status=0x%02x host=0x%04x driver=0x%04x",
@@ -193,10 +199,6 @@ func execute(
 			hdr.HostStatus,
 			hdr.DriverStatus,
 		)
-	}
-
-	if hdr.Info&0x01 != 0 {
-		return errors.New("SG_IO reports command failure")
 	}
 
 	return nil
