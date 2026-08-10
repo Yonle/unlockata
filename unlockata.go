@@ -10,7 +10,13 @@ func main() {
 	device := flag.String(
 		"device",
 		"",
-		"ATA device (e.g. /dev/sda)",
+		"ATA device (\"list\" to list ATA devices)",
+	)
+
+	serial := flag.String(
+		"serial",
+		"",
+		"ATA device serial number (\"list\" to list ATA devices)",
 	)
 
 	passwd := flag.String(
@@ -22,7 +28,7 @@ func main() {
 	operation := flag.String(
 		"op",
 		"unlock",
-		"ATA security operation",
+		"ATA security operation (\"help\" to list supported operations)",
 	)
 
 	useMaster := flag.Bool(
@@ -43,7 +49,41 @@ func main() {
 		"do not reread the partition table after the ATA command",
 	)
 
+	verbose := flag.Bool(
+		"verbose",
+		false,
+		"show CDB and Payload bytes being transmitted to the ATA drive.",
+	)
+
 	flag.Parse()
+
+	if *serial == "list" || *device == "list" {
+		disks, err := listDevices()
+
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "failed to list disks: %s\n", err)
+			os.Exit(1)
+		}
+
+		for _, disk := range disks {
+			fmt.Printf("/dev/%s: %s [%s]\n", disk.Name, disk.Serial, disk.Model)
+		}
+
+		os.Exit(0)
+	}
+
+	if *serial != "" {
+		var err error
+
+		*device, err = findSerial(*serial)
+
+		if err != nil || *device == "" {
+			fmt.Fprintf(os.Stderr, "failed to find %s: %s\n", *serial, err)
+			os.Exit(1)
+		}
+
+		fmt.Printf("%s is at %s\n", *serial, *device)
+	}
 
 	if *device == "" {
 		flag.Usage()
@@ -77,6 +117,7 @@ func main() {
 		*useMaster,
 		*maximum,
 		*noreadpart,
+		*verbose,
 		*device,
 		*passwd,
 	); err != nil {

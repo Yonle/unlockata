@@ -5,12 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 )
 
 const (
 	ATA_PASS_THROUGH_16 = 0x85
 
-	// SAT protocol 5 = PIO Data-Out.
+	SAT_PROTO_PIO_DATA_IN  = 4
 	SAT_PROTO_PIO_DATA_OUT = 5
 	SAT_PROTO_NON_DATA     = 3
 )
@@ -22,6 +23,52 @@ type ATAResult struct {
 	HostStatus   uint16
 	DriverStatus uint16
 	Info         uint32
+
+	Payload []byte
+}
+
+type Disk struct {
+	Name   string
+	Model  string
+	Serial string
+}
+
+func ataString(data []byte, word, words int) string {
+	start := word * 2
+	end := start + words*2
+
+	if start < 0 || end > len(data) {
+		return ""
+	}
+
+	buf := make([]byte, end-start)
+
+	for i := start; i < end; i += 2 {
+		buf[i-start] = data[i+1]
+		buf[i-start+1] = data[i]
+	}
+
+	return strings.TrimSpace(string(buf))
+}
+
+func buildIdentifyCDB() [16]byte {
+	var cdb [16]byte
+
+	cdb[0] = ATA_PASS_THROUGH_16
+
+	// PIO Data-In
+	cdb[1] = SAT_PROTO_PIO_DATA_IN << 1
+
+	// T_LENGTH=2, BYT_BLOK=1, T_DIR=1
+	cdb[2] = 0x0e
+
+	// 512-byte transfer = 1 block
+	cdb[6] = 1
+
+	// ATA IDENTIFY DEVICE
+	cdb[14] = 0xec
+
+	return cdb
 }
 
 func buildSecurityCDB(command ATASecurityCommand) [16]byte {
@@ -74,7 +121,7 @@ func buildSecurityPasswordPayload(password []byte, master, maximum bool) [512]by
 
 func execute(
 	ataOp ATASecurityCommand,
-	master, maximum, noreadpart bool,
+	master, maximum, noreadpart, verbose bool,
 	device, passwordFile string,
 ) error {
 	cdb := buildSecurityCDB(ataOp)
@@ -109,14 +156,16 @@ func execute(
 		)
 	}
 
-	fmt.Printf("CDB: %x\n", cdb)
-	fmt.Printf("PAYLOAD: %x\n", payload)
+	if verbose {
+		fmt.Printf("CDB: %x\n", cdb)
+		fmt.Printf("PAYLOAD: %x\n", payload)
+	}
 
 	r, err := ataExec(
 		device,
 		ataOp.PayloadType,
 		cdb,
-		payload,
+		&payload,
 		noreadpart,
 	)
 

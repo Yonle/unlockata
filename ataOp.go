@@ -16,9 +16,16 @@ type ATASecurityCommand struct {
 	PayloadType ATAPayloadType
 }
 
+type ATAIdentify struct {
+	Serial   string
+	Model    string
+	Firmware string
+}
+
 const (
 	PayloadNone ATAPayloadType = iota
 	PayloadSecurityPassword
+	PayloadIdentify
 )
 
 var ataSecurityOperationNames = []string{
@@ -113,4 +120,36 @@ func confirmDestructive(command ATASecurityCommand) bool {
 	fmt.Scanln(&answer)
 
 	return answer == "YES"
+}
+
+func identify(device string) (ATAIdentify, error) {
+	cdb := buildIdentifyCDB()
+
+	var payload [512]byte
+
+	r, err := ataExec(
+		device,
+		PayloadIdentify,
+		cdb,
+		&payload,
+		true,
+	)
+	if err != nil {
+		return ATAIdentify{}, err
+	}
+
+	if r.Status != 0 || r.Info&0x01 != 0 {
+		return ATAIdentify{}, fmt.Errorf(
+			"IDENTIFY DEVICE failed: status=0x%02x host=0x%04x driver=0x%04x",
+			r.Status,
+			r.HostStatus,
+			r.DriverStatus,
+		)
+	}
+
+	return ATAIdentify{
+		Serial:   ataString(r.Payload, 10, 10),
+		Firmware: ataString(r.Payload, 23, 4),
+		Model:    ataString(r.Payload, 27, 20),
+	}, nil
 }

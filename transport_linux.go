@@ -7,8 +7,10 @@ import (
 )
 
 const (
-	SG_IO           = 0x2285
-	SG_DXFER_TO_DEV = -2
+	SG_IO             = 0x2285
+	SG_DXFER_NONE     = -1
+	SG_DXFER_TO_DEV   = -2
+	SG_DXFER_FROM_DEV = -3
 
 	// Sense descriptor requested.
 	SG_FLAG_LUN_INHIBIT = 0x00000040
@@ -44,7 +46,7 @@ func ataExec(
 	device string,
 	ataPType ATAPayloadType,
 	cdb [16]byte,
-	payload [512]byte,
+	payload *[512]byte,
 	noreadpart bool,
 ) (
 	ataResult ATAResult,
@@ -55,10 +57,19 @@ func ataExec(
 	var dxferLen uint32
 	var dxferPtr uint64
 
-	if ataPType == PayloadSecurityPassword {
+	switch ataPType {
+	case PayloadSecurityPassword:
 		dxferDirection = SG_DXFER_TO_DEV
 		dxferLen = uint32(len(payload))
 		dxferPtr = uint64(uintptr(unsafe.Pointer(&payload[0])))
+
+	case PayloadIdentify:
+		dxferDirection = SG_DXFER_FROM_DEV
+		dxferLen = uint32(len(payload))
+		dxferPtr = uint64(uintptr(unsafe.Pointer(&payload[0])))
+
+	case PayloadNone:
+		dxferDirection = SG_DXFER_NONE
 	}
 
 	hdr := sgIOHdr{
@@ -105,6 +116,8 @@ func ataExec(
 		DriverStatus: hdr.DriverStatus,
 		Info:         hdr.Info,
 	}
+
+	ataResult.Payload = payload[:dxferLen]
 
 	if errno != 0 {
 		err = fmt.Errorf("SG_IO: %w", errno)
